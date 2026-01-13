@@ -1,0 +1,211 @@
+// Prisma Schema para Incubadora 2IAD
+// PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  SUPER_ADMIN
+  INCUBADO
+}
+
+enum StartupStatus {
+  ATIVA
+  GRADUADA
+  INATIVA
+}
+
+enum EditalStatus {
+  ABERTO
+  FECHADO
+  EM_ANALISE
+}
+
+enum MediaType {
+  IMAGE
+  PDF
+  VIDEO
+  DOCUMENT
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(INCUBADO)
+  active    Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  startupMembers StartupMember[]
+  planilhaPermissions PlanilhaPermission[]
+  logs      Log[]
+  
+  @@map("users")
+}
+
+model Startup {
+  id          String        @id @default(uuid())
+  name        String
+  slug        String        @unique
+  description String        @db.Text
+  segment     String
+  status      StartupStatus @default(ATIVA)
+  logoUrl     String?
+  website     String?
+  instagram   String?
+  linkedin    String?
+  
+  foundedAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  members     StartupMember[]
+  media       Media[]
+  
+  @@map("startups")
+}
+
+model StartupMember {
+  id        String   @id @default(uuid())
+  userId    String
+  startupId String
+  role      String   // "Founder", "Co-founder", "Mentor", "Member"
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startup   Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, startupId])
+  @@map("startup_members")
+}
+
+model Edital {
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  description String        @db.Text
+  pdfUrl      String?
+  status      EditalStatus  @default(ABERTO)
+  
+  startDate   DateTime
+  endDate     DateTime
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  @@map("editais")
+}
+
+model Parceiro {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  logoUrl     String?
+  website     String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("parceiros")
+}
+
+model Planilha {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  rows        PlanilhaRow[]
+  permissions PlanilhaPermission[]
+  
+  @@map("planilhas")
+}
+
+model PlanilhaRow {
+  id          String   @id @default(uuid())
+  planilhaId  String
+  rowIndex    Int
+  data        Json     // Armazena dados das células como JSON
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  planilha    Planilha @relation(fields: [planilhaId], references: [id], onDelete: Cascade)
+  
+  @@unique([planilhaId, rowIndex])
+  @@map("planilha_rows")
+}
+
+model PlanilhaPermission {
+  id          String   @id @default(uuid())
+  planilhaId  String
+  userId      String
+  canEdit     Boolean  @default(false)
+  canView     Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  planilha    Planilha @relation(fields: [planilhaId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([planilhaId, userId])
+  @@map("planilha_permissions")
+}
+
+model Media {
+  id          String    @id @default(uuid())
+  filename    String
+  originalName String
+  path        String
+  type        MediaType
+  size        Int
+  mimeType    String
+  
+  startupId   String?
+  
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  startup     Startup?  @relation(fields: [startupId], references: [id], onDelete: SetNull)
+  
+  @@map("media")
+}
+
+model Log {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@map("logs")
+}
