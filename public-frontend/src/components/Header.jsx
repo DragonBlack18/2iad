@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import { Button } from './ui/button'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
@@ -19,56 +18,56 @@ export default function Header() {
   const isActive = (path) => location.pathname === path
   
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <nav className="container flex h-16 items-center justify-between px-4 md:px-6">
+    <nav id="header" className="fixed w-full z-30 top-0 text-white transition-all duration-300">
+      <div className="w-full container mx-auto flex flex-wrap items-center justify-between mt-0 py-3 px-6">
         {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="text-2xl font-bold text-primary-500">2IAD</div>
-        </Link>
-        
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex md:items-center md:space-x-6">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={`text-sm font-medium transition-colors hover:text-primary-500 ${
-                isActive(item.href) ? 'text-primary-500' : 'text-gray-700'
-              }`}
-            >
-              {item.name}
-            </Link>
-          ))}
+        <div className="pl-0 md:pl-4 flex items-center">
+          <Link 
+            to="/" 
+            className="toggleColour text-white no-underline hover:no-underline font-bold text-2xl lg:text-4xl transition-colors"
+            id="brandname"
+          >
+            <span className="font-bold">2IAD</span>
+            <span className="font-normal text-lg lg:text-2xl"> Incubadora</span>
+          </Link>
         </div>
         
         {/* Mobile menu button */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden"
-        >
-          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+        <div className="block lg:hidden pr-4">
+          <button 
+            id="nav-toggle"
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex items-center p-1 text-white hover:text-gray-200 focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out"
+          >
+            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
         
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="absolute left-0 right-0 top-16 border-b bg-white md:hidden">
-            <div className="space-y-1 px-4 py-4">
-              {navigation.map((item) => (
+        {/* Navigation */}
+        <div 
+          className={`w-full flex-grow lg:flex lg:items-center lg:w-auto ${isOpen ? '' : 'hidden'} mt-2 lg:mt-0 bg-white lg:bg-transparent text-black p-4 lg:p-0 z-20 rounded-lg lg:rounded-none`}
+          id="nav-content"
+        >
+          <ul className="list-reset lg:flex justify-end flex-1 items-center">
+            {navigation.map((item) => (
+              <li key={item.name} className="mr-3">
                 <Link
-                  key={item.name}
                   to={item.href}
                   onClick={() => setIsOpen(false)}
-                  className={`block rounded-md px-3 py-2 text-base font-medium transition-colors hover:bg-gray-100 ${
-                    isActive(item.href) ? 'text-primary-500 bg-primary-50' : 'text-gray-700'
+                  className={`inline-block no-underline py-2 px-4 font-bold transition-colors ${
+                    isActive(item.href)
+                      ? 'text-gray-800 lg:text-white'
+                      : 'text-black lg:text-white hover:text-gray-600 lg:hover:text-gray-200'
                   }`}
                 >
                   {item.name}
                 </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </nav>
-    </header>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <hr className="border-b border-gray-100 opacity-25 my-0 py-0" />
+    </nav>
   )
 }

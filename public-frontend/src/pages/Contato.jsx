@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { Mail, Phone, MapPin, Send } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Button } from '../components/ui/button'
+import { Mail, Phone, MapPin, Send, Clock } from 'lucide-react'
 
 export default function Contato() {
   const [formData, setFormData] = useState({
@@ -23,103 +21,150 @@ export default function Contato() {
   
   const handleSubmit = (e) => {
     e.preventDefault()
-    // Aqui você pode integrar com a API
     console.log('Form submitted:', formData)
     setSubmitted(true)
-    setTimeout(() => setSubmitted(false), 3000)
+    setTimeout(() => {
+      setSubmitted(false)
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: '',
+        message: ''
+      })
+    }, 3000)
   }
   
   return (
-    <div className="py-16">
-      <div className="container px-4 md:px-6">
-        {/* Header */}
-        <div className="mb-12 text-center">
-          <h1 className="mb-4 text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
-            Entre em Contato
-          </h1>
-          <p className="mx-auto max-w-2xl text-lg text-gray-600">
-            Tire suas dúvidas ou envie sua proposta. Nossa equipe está pronta para ajudar!
-          </p>
+    <div className="bg-white">
+      {/* Hero Section */}
+      <div className="pt-24 pb-12 gradient text-white">
+        <div className="container px-6 mx-auto">
+          <div className="max-w-3xl mx-auto text-center">
+            <p className="uppercase tracking-loose text-sm md:text-base mb-4">Fale Conosco</p>
+            <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6">
+              Entre em Contato
+            </h1>
+            <p className="text-lg md:text-xl leading-relaxed opacity-90">
+              Tire suas dúvidas ou envie sua proposta. Nossa equipe está pronta para ajudar!
+            </p>
+          </div>
         </div>
-        
-        <div className="grid gap-8 lg:grid-cols-3">
-          {/* Contact Info */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações de Contato</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Mail className="mt-1 h-5 w-5 text-primary-500" />
+      </div>
+
+      {/* Wave Separator */}
+      <div className="relative -mt-12">
+        <svg viewBox="0 0 1428 174" version="1.1" xmlns="http://www.w3.org/2000/svg">
+          <g stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
+            <g transform="translate(-2.000000, 44.000000)" fill="#FFFFFF" fillRule="nonzero">
+              <path d="M0,0 C90.7283404,0.927527913 147.912752,27.187927 291.910178,59.9119003 C387.908462,81.7278826 543.605069,89.334785 759,82.7326078 C469.336065,156.254352 216.336065,153.6679 0,74.9732496" opacity="0.100000001"></path>
+              <path d="M100,104.708498 C277.413333,72.2345949 426.147877,52.5246657 546.203633,45.5787101 C666.259389,38.6327546 810.524845,41.7979068 979,55.0741668 C931.069965,56.122511 810.303266,74.8455141 616.699903,111.243176 C423.096539,147.640838 250.863238,145.462612 100,104.708498 Z" opacity="0.100000001"></path>
+              <path d="M1046,51.6521276 C1130.83045,29.328812 1279.08318,17.607883 1439,40.1656806 L1439,120 C1271.17211,77.9435312 1140.17211,55.1609071 1046,51.6521276 Z" opacity="0.200000003"></path>
+            </g>
+          </g>
+        </svg>
+      </div>
+      
+      <section className="py-16 bg-white">
+        <div className="container max-w-6xl mx-auto px-6">
+          <div className="grid gap-8 lg:grid-cols-3">
+            {/* Contact Info */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
+                <div className="flex items-start gap-4">
+                  <div className="bg-blue-100 p-3 rounded-lg">
+                    <Mail className="h-6 w-6 text-blue-600" />
+                  </div>
                   <div>
-                    <div className="font-medium text-gray-900">Email</div>
-                    <a href="mailto:contato@incubadora2iad.com.br" className="text-sm text-gray-600 hover:text-primary-500">
+                    <h3 className="font-bold text-gray-900 mb-2">Email</h3>
+                    <a 
+                      href="mailto:contato@incubadora2iad.com.br" 
+                      className="text-gray-600 hover:text-blue-600 transition-colors"
+                    >
                       contato@incubadora2iad.com.br
                     </a>
                   </div>
                 </div>
-                
-                <div className="flex items-start gap-3">
-                  <Phone className="mt-1 h-5 w-5 text-primary-500" />
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
+                <div className="flex items-start gap-4">
+                  <div className="bg-purple-100 p-3 rounded-lg">
+                    <Phone className="h-6 w-6 text-purple-600" />
+                  </div>
                   <div>
-                    <div className="font-medium text-gray-900">Telefone</div>
-                    <a href="tel:+557932182100" className="text-sm text-gray-600 hover:text-primary-500">
+                    <h3 className="font-bold text-gray-900 mb-2">Telefone</h3>
+                    <a 
+                      href="tel:+557932182100" 
+                      className="text-gray-600 hover:text-purple-600 transition-colors"
+                    >
                       (79) 3218-2100
                     </a>
                   </div>
                 </div>
-                
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-1 h-5 w-5 text-primary-500" />
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500">
+                <div className="flex items-start gap-4">
+                  <div className="bg-green-100 p-3 rounded-lg">
+                    <MapPin className="h-6 w-6 text-green-600" />
+                  </div>
                   <div>
-                    <div className="font-medium text-gray-900">Endereço</div>
-                    <div className="text-sm text-gray-600">
+                    <h3 className="font-bold text-gray-900 mb-2">Endereço</h3>
+                    <div className="text-gray-600">
                       Aracaju, Sergipe<br />
                       Brasil
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-primary-50/30">
-              <CardContent className="pt-6">
-                <h3 className="mb-3 font-semibold text-gray-900">Horário de Atendimento</h3>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex justify-between">
-                    <span>Segunda a Sexta:</span>
-                    <span className="font-medium">08:00 - 18:00</span>
+              </div>
+              
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg shadow-md p-6">
+                <div className="flex items-start gap-4">
+                  <div className="bg-white p-3 rounded-lg">
+                    <Clock className="h-6 w-6 text-blue-600" />
                   </div>
-                  <div className="flex justify-between">
-                    <span>Sábado:</span>
-                    <span className="font-medium">Fechado</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Domingo:</span>
-                    <span className="font-medium">Fechado</span>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-3">Horário de Atendimento</h3>
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div className="flex justify-between">
+                        <span>Segunda a Sexta:</span>
+                        <span className="font-semibold">08:00 - 18:00</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Sábado:</span>
+                        <span className="font-semibold">Fechado</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Domingo:</span>
+                        <span className="font-semibold">Fechado</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Contact Form */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Envie sua Mensagem</CardTitle>
-            </CardHeader>
-            <CardContent>
+              </div>
+            </div>
+            
+            {/* Contact Form */}
+            <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-8">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">Envie sua Mensagem</h2>
+              
               {submitted && (
-                <div className="mb-6 rounded-md bg-green-50 p-4 text-green-800">
-                  Mensagem enviada com sucesso! Entraremos em contato em breve.
+                <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                  <div className="flex items-center gap-3">
+                    <div className="text-green-600 text-2xl">✓</div>
+                    <div>
+                      <p className="font-semibold text-green-800">Mensagem enviada com sucesso!</p>
+                      <p className="text-sm text-green-700">Entraremos em contato em breve.</p>
+                    </div>
+                  </div>
                 </div>
               )}
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <label htmlFor="name" className="mb-2 block text-sm font-medium text-gray-700">
+                    <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
                       Nome *
                     </label>
                     <input
@@ -129,12 +174,13 @@ export default function Contato() {
                       required
                       value={formData.name}
                       onChange={handleChange}
-                      className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full rounded-lg border-2 border-gray-200 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="Seu nome completo"
                     />
                   </div>
                   
                   <div>
-                    <label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-700">
+                    <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
                       Email *
                     </label>
                     <input
@@ -144,14 +190,15 @@ export default function Contato() {
                       required
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full rounded-lg border-2 border-gray-200 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="seu@email.com"
                     />
                   </div>
                 </div>
                 
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <label htmlFor="phone" className="mb-2 block text-sm font-medium text-gray-700">
+                    <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
                       Telefone
                     </label>
                     <input
@@ -160,12 +207,13 @@ export default function Contato() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full rounded-lg border-2 border-gray-200 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="(00) 00000-0000"
                     />
                   </div>
                   
                   <div>
-                    <label htmlFor="subject" className="mb-2 block text-sm font-medium text-gray-700">
+                    <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-2">
                       Assunto *
                     </label>
                     <select
@@ -174,7 +222,7 @@ export default function Contato() {
                       required
                       value={formData.subject}
                       onChange={handleChange}
-                      className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full rounded-lg border-2 border-gray-200 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors"
                     >
                       <option value="">Selecione...</option>
                       <option value="incubacao">Processo de Incubação</option>
@@ -187,7 +235,7 @@ export default function Contato() {
                 </div>
                 
                 <div>
-                  <label htmlFor="message" className="mb-2 block text-sm font-medium text-gray-700">
+                  <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">
                     Mensagem *
                   </label>
                   <textarea
@@ -197,19 +245,41 @@ export default function Contato() {
                     rows={6}
                     value={formData.message}
                     onChange={handleChange}
-                    className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
+                    className="w-full rounded-lg border-2 border-gray-200 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors resize-none"
+                    placeholder="Digite sua mensagem..."
+                  ></textarea>
                 </div>
                 
-                <Button type="submit" size="lg" className="w-full md:w-auto">
-                  <Send className="mr-2 h-4 w-4" />
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold rounded-lg px-8 py-4 hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <Send className="h-5 w-5" />
                   Enviar Mensagem
-                </Button>
+                </button>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="gradient py-20">
+        <div className="container mx-auto px-6 text-center">
+          <h2 className="mb-4 text-3xl lg:text-4xl font-bold text-white">
+            Visite nossa incubadora
+          </h2>
+          <p className="mb-8 text-lg lg:text-xl text-white opacity-90">
+            Agende uma visita e conheça nossa estrutura e equipe pessoalmente
+          </p>
+          <a
+            href="tel:+557932182100"
+            className="inline-block bg-white text-purple-600 font-bold rounded-full py-4 px-8 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+          >
+            Ligar Agora
+          </a>
+        </div>
+      </section>
     </div>
   )
 }
