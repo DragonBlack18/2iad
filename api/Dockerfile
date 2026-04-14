@@ -21,5 +21,5 @@ RUN npx prisma generate
 # Expor porta da API
 EXPOSE 3000
 
-# Script de inicialização que roda migrations e inicia o servidor
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run dev"]
+# Iniciar servidor sem migrations (já aplicadas manualmente)
+CMD ["npm", "run", "dev"]

@@ -19,7 +19,12 @@ const limiter = rateLimit({
 
 // Middlewares
 app.use(cors({
-  origin: [process.env.PUBLIC_URL, process.env.ADMIN_URL],
+  origin: [
+    process.env.PUBLIC_URL || 'http://localhost:5173',
+    process.env.ADMIN_URL || 'http://localhost:5174',
+    'http://localhost:5174',
+    'http://localhost:5173'
+  ],
   credentials: true
 }));
 app.use(express.json());
@@ -31,6 +36,36 @@ app.use('/uploads', express.static('uploads'));
 
 // Routes
 app.use('/api', routes);
+
+// Root route - API Documentation
+app.get('/', (req, res) => {
+  res.json({
+    name: '🚀 Incubadora 2IAD - API',
+    version: '1.0.0',
+    status: 'online',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth/login',
+      editais: '/api/editais',
+      parceiros: '/api/parceiros',
+      startups: '/api/startups',
+      planilhas: '/api/planilhas (requer autenticação)',
+      media: '/api/media (requer autenticação)'
+    },
+    documentation: {
+      login: {
+        method: 'POST',
+        url: '/api/auth/login',
+        body: {
+          email: 'rose@incubadora2iad.com.br',
+          password: '123456'
+        }
+      }
+    },
+    admin: 'http://localhost:5174',
+    public: 'http://localhost:5173'
+  });
+});
 
 // Health check
 app.get('/health', (req, res) => {

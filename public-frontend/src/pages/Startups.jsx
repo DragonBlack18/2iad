@@ -1,19 +1,40 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Search, Filter, ArrowRight } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowRight, Building2, ExternalLink } from 'lucide-react'
+import { useState, useMemo } from 'react'
 import { startupsAPI } from '../lib/api'
+import StartupSearch from '../components/StartupSearch'
+import OptimizedImage from '../components/OptimizedImage'
 
 export default function Startups() {
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filters, setFilters] = useState({ status: 'all', setor: 'all' })
   
   const { data, isLoading, error } = useQuery({
-    queryKey: ['startups', search, statusFilter],
-    queryFn: () => startupsAPI.getAll({ search, status: statusFilter })
+    queryKey: ['startups'],
+    queryFn: () => startupsAPI.getAll()
   })
   
   const startups = data?.data?.startups || []
+  
+  // Filter and search logic
+  const filteredStartups = useMemo(() => {
+    return startups.filter(startup => {
+      // Search filter
+      const matchesSearch = !searchTerm || 
+        startup.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        startup.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        startup.setor?.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      // Status filter
+      const matchesStatus = filters.status === 'all' || startup.status === filters.status
+      
+      // Setor filter
+      const matchesSetor = filters.setor === 'all' || startup.setor === filters.setor
+      
+      return matchesSearch && matchesStatus && matchesSetor
+    })
+  }, [startups, searchTerm, filters])
   
   return (
     <div className="bg-white">
@@ -47,79 +68,106 @@ export default function Startups() {
       
       <section className="py-16 bg-white">
         <div className="container max-w-6xl mx-auto px-6">
-          {/* Filtros */}
-          <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-gray-50 p-6 rounded-lg shadow-sm">
-            <div className="relative flex-1 md:max-w-md">
-              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar startups..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border-2 border-gray-200 py-3 pl-12 pr-4 focus:border-blue-500 focus:outline-none transition-colors"
-              />
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <Filter className="h-5 w-5 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-lg border-2 border-gray-200 px-5 py-3 focus:border-blue-500 focus:outline-none transition-colors"
-              >
-                <option value="">Todos os Status</option>
-                <option value="ATIVA">Ativas</option>
-                <option value="GRADUADA">Graduadas</option>
-                <option value="INATIVA">Inativas</option>
-              </select>
-            </div>
+          {/* Search and Filters */}
+          <div className="mb-12">
+            <StartupSearch 
+              onSearch={setSearchTerm}
+              onFilter={setFilters}
+            />
           </div>
+
+          {/* Results Count */}
+          <div className="mb-6">
+            <p className="text-gray-600">
+              {isLoading ? (
+                'Carregando...'
+              ) : (
+                <>
+                  <span className="font-bold text-gray-900">{filteredStartups.length}</span>
+                  {filteredStartups.length === 1 ? ' startup encontrada' : ' startups encontradas'}
+                </>
+              )}
+            </p>
+          </div>
+
           {/* Loading */}
           {isLoading && (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-gray-600 mt-4">Carregando startups...</p>
+            <div className="text-center py-16">
+              <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+              <p className="text-gray-600 mt-4 font-medium">Carregando startups...</p>
             </div>
           )}
           
           {/* Error */}
           {error && (
-            <div className="text-center py-12 bg-red-50 rounded-lg">
-              <div className="text-red-600 font-semibold">Erro ao carregar startups</div>
+            <div className="text-center py-16 bg-red-50 rounded-xl">
+              <div className="text-red-600 font-bold text-lg">Erro ao carregar startups</div>
               <p className="text-red-500 text-sm mt-2">Tente novamente mais tarde</p>
             </div>
           )}
           
+          {/* No Results */}
+          {!isLoading && !error && filteredStartups.length === 0 && (
+            <div className="text-center py-16 bg-gray-50 rounded-xl">
+              <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <div className="text-gray-600 font-bold text-lg">Nenhuma startup encontrada</div>
+              <p className="text-gray-500 text-sm mt-2">Tente ajustar os filtros de busca</p>
+            </div>
+          )}
+          
           {/* Startups Grid */}
-          {!isLoading && !error && startups.length > 0 && (
+          {!isLoading && !error && filteredStartups.length > 0 && (
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {startups.map((startup) => (
-                <div key={startup.id} className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-all duration-300 hover:shadow-xl">
+              {filteredStartups.map((startup) => (
+                <div key={startup.id} className="group bg-white rounded-xl shadow-card hover:shadow-card-hover overflow-hidden transition-all duration-300 hover-lift">
+                  {startup.logo && (
+                    <OptimizedImage
+                      src={startup.logo}
+                      alt={startup.nome}
+                      aspectRatio="aspect-[16/9]"
+                    />
+                  )}
+                  
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm font-semibold text-blue-500 bg-blue-50 px-3 py-1 rounded-full">
-                        {startup.segment}
+                      <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+                        {startup.setor || 'Tecnologia'}
                       </span>
-                      <span className={`text-xs font-medium px-3 py-1 rounded-full ${
+                      <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${
                         startup.status === 'ATIVA' ? 'bg-green-100 text-green-700' :
                         startup.status === 'GRADUADA' ? 'bg-blue-100 text-blue-700' :
                         'bg-gray-100 text-gray-700'
                       }`}>
-                        {startup.status}
+                        {startup.status || 'ATIVA'}
                       </span>
                     </div>
                     
-                    <h3 className="text-xl font-bold text-gray-800 mb-3">{startup.name}</h3>
-                    <p className="text-gray-600 mb-4 line-clamp-3 leading-relaxed">
-                      {startup.description}
+                    <h3 className="text-xl font-bold text-gray-800 mb-3 group-hover:text-blue-600 transition-colors">
+                      {startup.nome}
+                    </h3>
+                    <p className="text-gray-600 mb-6 line-clamp-3 leading-relaxed">
+                      {startup.descricao}
                     </p>
                     
-                    <Link
-                      to={`/startups/${startup.slug}`}
-                      className="inline-flex items-center text-blue-600 font-semibold hover:text-purple-600 transition-colors"
-                    >
-                      Saiba mais <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        to={`/startups/${startup.slug}`}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Ver Detalhes
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                      {startup.website && (
+                        <a
+                          href={startup.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2.5 border-2 border-gray-200 rounded-lg hover:border-blue-600 hover:text-blue-600 transition-colors"
+                        >
+                          <ExternalLink className="w-5 h-5" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -128,10 +176,10 @@ export default function Startups() {
           
           {/* Empty State */}
           {!isLoading && !error && startups.length === 0 && (
-            <div className="text-center py-16 bg-gray-50 rounded-lg">
-              <div className="text-gray-400 text-5xl mb-4">🔍</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">Nenhuma startup encontrada</h3>
-              <p className="text-gray-500">Tente ajustar os filtros de busca</p>
+            <div className="text-center py-16 bg-gray-50 rounded-xl">
+              <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <div className="text-gray-600 font-bold text-lg">Ainda não há startups cadastradas</div>
+              <p className="text-gray-500 text-sm mt-2">Em breve teremos novidades!</p>
             </div>
           )}
         </div>
@@ -146,12 +194,12 @@ export default function Startups() {
           <p className="mb-8 text-lg lg:text-xl text-white opacity-90">
             Inscreva-se nos nossos editais e transforme sua startup com nosso apoio
           </p>
-          <a
-            href="/editais"
-            className="inline-block bg-white text-purple-600 font-bold rounded-full py-4 px-8 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+          <Link
+            to="/editais"
+            className="inline-block bg-white text-blue-600 font-bold rounded-full py-4 px-8 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
           >
             Ver Editais Abertos
-          </a>
+          </Link>
         </div>
       </section>
     </div>

@@ -1,0 +1,119 @@
+/* Estilos customizados para react-spreadsheet */
+.Spreadsheet {
+  width: 100%;
+  overflow: auto;
+}
+
+.Spreadsheet__table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: auto;
+}
+
+.Spreadsheet__header {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.Spreadsheet__header th {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 1rem;
+  text-align: center;
+}
+
+.Spreadsheet__row {
+  background-color: white;
+}
+
+.Spreadsheet__row:hover {
+  background-color: #f9fafb;
+}
+
+.Spreadsheet__cell {
+  border: 1px solid #e5e7eb;
+  padding: 0;
+  position: relative;
+  min-width: 100px;
+}
+
+.Spreadsheet__cell--readonly {
+  background-color: #f9fafb;
+  cursor: not-allowed;
+}
+
+.Spreadsheet__cell--selected {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+.Spreadsheet__cell--copied {
+  outline: 2px dashed #3b82f6;
+  outline-offset: -2px;
+}
+
+.Spreadsheet__data-viewer {
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  height: 100%;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.Spreadsheet__data-editor {
+  padding: 0.25rem 0.5rem;
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.Spreadsheet__data-editor:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+.Spreadsheet__active-cell {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+/* Indicadores de linha/coluna */
+.Spreadsheet__row-indicator,
+.Spreadsheet__column-indicator {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+}
+
+.Spreadsheet__row-indicator {
+  width: 40px;
+  min-width: 40px;
+}
+
+/* Seleção múltipla */
+.Spreadsheet__floating-rect {
+  position: absolute;
+  pointer-events: none;
+  border: 2px solid #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Container */
+.spreadsheet-container {
+  position: relative;
+}
+
+.spreadsheet-container .Spreadsheet {
+  font-size: 0.875rem;
+}

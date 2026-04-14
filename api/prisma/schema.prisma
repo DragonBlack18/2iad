@@ -1,6 +1,3 @@
-// Prisma Schema para Incubadora 2IAD
-// PostgreSQL
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,202 +7,552 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== ENUMS ====================
-
-enum Role {
-  SUPER_ADMIN
-  INCUBADO
-}
-
-enum StartupStatus {
-  ATIVA
-  GRADUADA
-  INATIVA
-}
-
-enum EditalStatus {
-  ABERTO
-  FECHADO
-  EM_ANALISE
-}
-
-enum MediaType {
-  IMAGE
-  PDF
-  VIDEO
-  DOCUMENT
-}
-
-// ==================== MODELS ====================
-
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(INCUBADO)
-  active    Boolean  @default(true)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relations
-  startupMembers StartupMember[]
-  planilhaPermissions PlanilhaPermission[]
-  logs      Log[]
-  
+  id                                            String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nome                                          String              @db.VarChar(255)
+  email                                         String              @unique @db.VarChar(255)
+  senha                                         String              @db.VarChar(255)
+  telefone                                      String?             @db.VarChar(20)
+  cpf                                           String?             @unique @db.VarChar(14)
+  tipo                                          String?             @default("EMPREENDEDOR") @db.VarChar(50)
+  role                                          String              @default("INCUBADO") @db.VarChar(50)
+  startup_id                                    String?             @db.Uuid
+  avatar                                        String?
+  bio                                           String?
+  linkedin                                      String?             @db.VarChar(255)
+  website                                       String?             @db.VarChar(255)
+  created_at                                    DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at                                    DateTime?           @default(now()) @db.Timestamp(6)
+  ativo                                         Boolean?            @default(true)
+  ultimo_acesso                                 DateTime?           @db.Timestamp(6)
+  artigos                                       artigos[]
+  candidaturas_candidaturas_avaliador_idTousers candidaturas[]      @relation("candidaturas_avaliador_idTousers")
+  candidaturas_candidaturas_user_idTousers      candidaturas[]      @relation("candidaturas_user_idTousers")
+  evento_inscricoes                             evento_inscricoes[]
+  mensagens_mensagens_destinatario_idTousers    mensagens[]         @relation("mensagens_destinatario_idTousers")
+  mensagens_mensagens_remetente_idTousers       mensagens[]         @relation("mensagens_remetente_idTousers")
+  mentores                                      mentores[]
+  notificacoes                                  notificacoes[]
+  reservas                                      reservas[]
+  startup_membros                               startup_membros[]
+  startups                                      Startup[]
+  logs                                          Log[]
+  planilhas_criadas                             Planilha[]          @relation("PlanilhaCriador")
+  planilhas_atualizadas                         Planilha[]          @relation("PlanilhaAtualizador")
+  planilha_permissoes                           PlanilhaPermissao[]
+
+  @@index([ativo], map: "idx_users_ativo")
+  @@index([email], map: "idx_users_email")
+  @@index([tipo], map: "idx_users_tipo")
+  @@index([role], map: "idx_users_role")
+  @@index([startup_id], map: "idx_users_startup")
   @@map("users")
 }
 
 model Startup {
-  id          String        @id @default(uuid())
-  name        String
-  slug        String        @unique
-  description String        @db.Text
-  segment     String
-  status      StartupStatus @default(ATIVA)
-  logoUrl     String?
-  website     String?
-  instagram   String?
-  linkedin    String?
-  
-  foundedAt   DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  // Relations
-  members     StartupMember[]
-  media       Media[]
-  
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nome               String               @db.VarChar(255)
+  slug               String               @unique @db.VarChar(255)
+  descricao          String?
+  descricao_completa String?
+  logo               String?
+  banner             String?
+  setor              String?              @db.VarChar(100)
+  modelo_negocio     String?              @db.VarChar(100)
+  status             String?              @default("PRE_INCUBACAO") @db.VarChar(50)
+  fundacao_ano       Int?
+  website            String?              @db.VarChar(255)
+  email              String?              @db.VarChar(255)
+  telefone           String?              @db.VarChar(20)
+  cnpj               String?              @db.VarChar(18)
+  endereco           String?
+  cidade             String?              @db.VarChar(100)
+  estado             String?              @db.VarChar(2)
+  pitch_deck         String?
+  video_pitch        String?
+  redes_sociais      Json?
+  metricas           Json?
+  fundador_id        String?              @db.Uuid
+  data_entrada       DateTime?            @db.Date
+  data_graduacao     DateTime?            @db.Date
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(6)
+  candidaturas       candidaturas[]
+  evento_inscricoes  evento_inscricoes[]
+  reservas           reservas[]
+  sessoes_mentoria   sessoes_mentoria[]
+  startup_documentos startup_documentos[]
+  startup_imagens    startup_imagens[]
+  startup_membros    startup_membros[]
+  planilhas          Planilha[]
+  users              User?                @relation(fields: [fundador_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([fundador_id], map: "idx_startups_fundador")
+  @@index([setor], map: "idx_startups_setor")
+  @@index([slug], map: "idx_startups_slug")
+  @@index([status], map: "idx_startups_status")
   @@map("startups")
 }
 
-model StartupMember {
-  id        String   @id @default(uuid())
-  userId    String
-  startupId String
-  role      String   // "Founder", "Co-founder", "Mentor", "Member"
-  
-  createdAt DateTime @default(now())
-  
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  startup   Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, startupId])
-  @@map("startup_members")
-}
-
 model Edital {
-  id          String        @id @default(uuid())
-  title       String
-  slug        String        @unique
-  description String        @db.Text
-  pdfUrl      String?
-  status      EditalStatus  @default(ABERTO)
-  
-  startDate   DateTime
-  endDate     DateTime
-  
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
+  id                      String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  titulo                  String         @db.VarChar(255)
+  slug                    String         @unique @db.VarChar(255)
+  descricao               String?
+  descricao_completa      String?
+  imagem_capa             String?
+  tipo                    String?        @db.VarChar(50)
+  status                  String?        @default("RASCUNHO") @db.VarChar(50)
+  data_abertura           DateTime?      @db.Date
+  data_encerramento       DateTime?      @db.Date
+  vagas                   Int?
+  requisitos              String[]
+  beneficios              String[]
+  etapas                  Json?
+  documentos_necessarios  String[]
+  criterios_avaliacao     Json?
+  arquivo_edital          String?
+  investimento_disponivel Decimal?       @db.Decimal(15, 2)
+  created_at              DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?      @default(now()) @db.Timestamp(6)
+  candidaturas            candidaturas[]
+
+  @@index([data_abertura, data_encerramento], map: "idx_editais_datas")
+  @@index([slug], map: "idx_editais_slug")
+  @@index([status], map: "idx_editais_status")
   @@map("editais")
 }
 
 model Parceiro {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String   @unique
-  description String?  @db.Text
-  logoUrl     String?
-  website     String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nome             String    @db.VarChar(255)
+  slug             String    @unique @db.VarChar(255)
+  descricao        String?
+  logo             String?
+  banner           String?
+  tipo             String?   @db.VarChar(50)
+  categoria        String?   @db.VarChar(100)
+  website          String?   @db.VarChar(255)
+  email            String?   @db.VarChar(255)
+  telefone         String?   @db.VarChar(20)
+  endereco         String?
+  cidade           String?   @db.VarChar(100)
+  estado           String?   @db.VarChar(2)
+  redes_sociais    Json?
+  beneficios       String[]
+  areas_atuacao    String[]
+  contato_nome     String?   @db.VarChar(255)
+  contato_cargo    String?   @db.VarChar(100)
+  contato_email    String?   @db.VarChar(255)
+  contato_telefone String?   @db.VarChar(20)
+  data_parceria    DateTime? @db.Date
+  ativo            Boolean?  @default(true)
+  destaque         Boolean?  @default(false)
+  ordem            Int?      @default(0)
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([ativo], map: "idx_parceiros_ativo")
+  @@index([slug], map: "idx_parceiros_slug")
+  @@index([tipo], map: "idx_parceiros_tipo")
   @@map("parceiros")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model artigos {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  titulo          String    @db.VarChar(255)
+  slug            String    @unique @db.VarChar(255)
+  resumo          String?
+  conteudo        String
+  imagem_capa     String?
+  autor_id        String?   @db.Uuid
+  categoria       String?   @db.VarChar(100)
+  tags            String[]
+  publicado       Boolean?  @default(false)
+  data_publicacao DateTime? @db.Timestamp(6)
+  visualizacoes   Int?      @default(0)
+  tempo_leitura   Int?
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  updated_at      DateTime? @default(now()) @db.Timestamp(6)
+  users           User?     @relation(fields: [autor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model candidaturas {
+  id                                     String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  edital_id                              String?   @db.Uuid
+  user_id                                String?   @db.Uuid
+  startup_id                             String?   @db.Uuid
+  status                                 String?   @default("ENVIADA") @db.VarChar(50)
+  pontuacao                              Decimal?  @db.Decimal(5, 2)
+  feedback                               String?
+  documentos                             Json?
+  etapa_atual                            String?   @db.VarChar(100)
+  data_candidatura                       DateTime? @default(now()) @db.Timestamp(6)
+  data_avaliacao                         DateTime? @db.Timestamp(6)
+  avaliador_id                           String?   @db.Uuid
+  created_at                             DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                             DateTime? @default(now()) @db.Timestamp(6)
+  users_candidaturas_avaliador_idTousers User?     @relation("candidaturas_avaliador_idTousers", fields: [avaliador_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  editais                                Edital?   @relation(fields: [edital_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  startups                               Startup?  @relation(fields: [startup_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_candidaturas_user_idTousers      User?     @relation("candidaturas_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([edital_id], map: "idx_candidaturas_edital")
+  @@index([status], map: "idx_candidaturas_status")
+  @@index([user_id], map: "idx_candidaturas_user")
+}
+
+model configuracoes {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  chave      String    @unique @db.VarChar(100)
+  valor      String?
+  tipo       String?   @db.VarChar(50)
+  descricao  String?
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model evento_inscricoes {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  evento_id      String?   @db.Uuid
+  user_id        String?   @db.Uuid
+  startup_id     String?   @db.Uuid
+  status         String?   @default("CONFIRMADA") @db.VarChar(50)
+  data_inscricao DateTime? @default(now()) @db.Timestamp(6)
+  data_presenca  DateTime? @db.Timestamp(6)
+  eventos        eventos?  @relation(fields: [evento_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  startups       Startup?  @relation(fields: [startup_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users          User?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model eventos {
+  id                 String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  titulo             String              @db.VarChar(255)
+  slug               String              @unique @db.VarChar(255)
+  descricao          String?
+  imagem_capa        String?
+  tipo               String?             @db.VarChar(50)
+  modalidade         String?             @db.VarChar(50)
+  data_inicio        DateTime            @db.Timestamp(6)
+  data_fim           DateTime?           @db.Timestamp(6)
+  local              String?             @db.VarChar(255)
+  link_online        String?
+  palestrantes       Json?
+  vagas              Int?
+  vagas_disponiveis  Int?
+  inscricoes_abertas Boolean?            @default(true)
+  valor              Decimal?            @default(0.00) @db.Decimal(10, 2)
+  tags               String[]
+  publico_alvo       String[]
+  created_at         DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?           @default(now()) @db.Timestamp(6)
+  evento_inscricoes  evento_inscricoes[]
+
+  @@index([data_inicio, data_fim], map: "idx_eventos_datas")
+  @@index([slug], map: "idx_eventos_slug")
+  @@index([tipo], map: "idx_eventos_tipo")
+}
+
+model mensagens {
+  id                                     String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  remetente_id                           String?   @db.Uuid
+  destinatario_id                        String?   @db.Uuid
+  assunto                                String?   @db.VarChar(255)
+  mensagem                               String?
+  lida                                   Boolean?  @default(false)
+  data_leitura                           DateTime? @db.Timestamp(6)
+  created_at                             DateTime? @default(now()) @db.Timestamp(6)
+  users_mensagens_destinatario_idTousers User?     @relation("mensagens_destinatario_idTousers", fields: [destinatario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_mensagens_remetente_idTousers    User?     @relation("mensagens_remetente_idTousers", fields: [remetente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model mentores {
+  id                  String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id             String?            @db.Uuid
+  especialidades      String[]
+  areas_interesse     String[]
+  experiencia         String?
+  empresas_anteriores String[]
+  disponibilidade     String?            @db.VarChar(100)
+  sessoes_realizadas  Int?               @default(0)
+  avaliacao_media     Decimal?           @db.Decimal(3, 2)
+  ativo               Boolean?           @default(true)
+  created_at          DateTime?          @default(now()) @db.Timestamp(6)
+  users               User?              @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sessoes_mentoria    sessoes_mentoria[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model notificacoes {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String?   @db.Uuid
+  tipo       String?   @db.VarChar(50)
+  titulo     String?   @db.VarChar(255)
+  mensagem   String?
+  link       String?
+  lida       Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  users      User?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model recursos {
+  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nome        String     @db.VarChar(255)
+  tipo        String?    @db.VarChar(50)
+  descricao   String?
+  imagens     String[]
+  capacidade  Int?
+  localizacao String?    @db.VarChar(255)
+  disponivel  Boolean?   @default(true)
+  valor_hora  Decimal?   @db.Decimal(10, 2)
+  tags        String[]
+  created_at  DateTime?  @default(now()) @db.Timestamp(6)
+  reservas    reservas[]
+}
+
+model reservas {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  recurso_id  String?   @db.Uuid
+  user_id     String?   @db.Uuid
+  startup_id  String?   @db.Uuid
+  data_inicio DateTime  @db.Timestamp(6)
+  data_fim    DateTime  @db.Timestamp(6)
+  status      String?   @default("CONFIRMADA") @db.VarChar(50)
+  observacoes String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  recursos    recursos? @relation(fields: [recurso_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  startups    Startup?  @relation(fields: [startup_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users       User?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sessoes_mentoria {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  mentor_id   String?   @db.Uuid
+  startup_id  String?   @db.Uuid
+  titulo      String?   @db.VarChar(255)
+  descricao   String?
+  data_hora   DateTime  @db.Timestamp(6)
+  duracao     Int?
+  status      String?   @default("AGENDADA") @db.VarChar(50)
+  local       String?   @db.VarChar(255)
+  link_online String?
+  notas       String?
+  avaliacao   Int?
+  feedback    String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  mentores    mentores? @relation(fields: [mentor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  startups    Startup?  @relation(fields: [startup_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model startup_documentos {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  startup_id String?   @db.Uuid
+  titulo     String    @db.VarChar(255)
+  tipo       String?   @db.VarChar(50)
+  url        String
+  tamanho    Int?
+  mime_type  String?   @db.VarChar(100)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  startups   Startup?  @relation(fields: [startup_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model startup_imagens {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  startup_id String?   @db.Uuid
+  url        String
+  tipo       String?   @db.VarChar(50)
+  titulo     String?   @db.VarChar(255)
+  descricao  String?
+  ordem      Int?      @default(0)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  startups   Startup?  @relation(fields: [startup_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model startup_membros {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  startup_id String?   @db.Uuid
+  user_id    String?   @db.Uuid
+  nome       String    @db.VarChar(255)
+  cargo      String?   @db.VarChar(100)
+  email      String?   @db.VarChar(255)
+  linkedin   String?   @db.VarChar(255)
+  foto       String?
+  bio        String?
+  ordem      Int?      @default(0)
+  ativo      Boolean?  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  startups   Startup?  @relation(fields: [startup_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      User?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+// ============================================
+// SISTEMA DE PLANILHAS (CORE DO SISTEMA)
+// ============================================
+
 model Planilha {
-  id          String   @id @default(uuid())
-  name        String
-  description String?  @db.Text
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  rows        PlanilhaRow[]
-  permissions PlanilhaPermission[]
-  
+  id               String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nome             String                @db.VarChar(255)
+  descricao        String?
+  startup_id       String                @db.Uuid
+  criado_por       String                @db.Uuid
+  atualizado_por   String?               @db.Uuid
+  versao           Int                   @default(1)
+  ativa            Boolean               @default(true)
+  template         Boolean               @default(false)
+  config           Json?
+  created_at       DateTime              @default(now()) @db.Timestamp(6)
+  updated_at       DateTime              @default(now()) @db.Timestamp(6)
+  startup          Startup               @relation(fields: [startup_id], references: [id], onDelete: Cascade)
+  criador          User                  @relation("PlanilhaCriador", fields: [criado_por], references: [id])
+  atualizador      User?                 @relation("PlanilhaAtualizador", fields: [atualizado_por], references: [id])
+  colunas          PlanilhaColuna[]
+  linhas           PlanilhaLinha[]
+  permissoes       PlanilhaPermissao[]
+  versoes          PlanilhaVersao[]
+
+  @@index([startup_id], map: "idx_planilhas_startup")
+  @@index([ativa], map: "idx_planilhas_ativa")
   @@map("planilhas")
 }
 
-model PlanilhaRow {
-  id          String   @id @default(uuid())
-  planilhaId  String
-  rowIndex    Int
-  data        Json     // Armazena dados das células como JSON
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  planilha    Planilha @relation(fields: [planilhaId], references: [id], onDelete: Cascade)
-  
-  @@unique([planilhaId, rowIndex])
-  @@map("planilha_rows")
+model PlanilhaColuna {
+  id           String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  planilha_id  String           @db.Uuid
+  nome         String           @db.VarChar(255)
+  tipo         String           @db.VarChar(50) // TEXT, NUMBER, DATE, BOOLEAN, SELECT, FORMULA
+  largura      Int?             @default(150)
+  ordem        Int              @default(0)
+  obrigatoria  Boolean          @default(false)
+  opcoes       String[]         // Para tipo SELECT
+  formula      String?          // Para tipo FORMULA
+  formato      String?          @db.VarChar(50) // Formatação (moeda, percentual, etc)
+  visivel      Boolean          @default(true)
+  editavel     Boolean          @default(true)
+  created_at   DateTime         @default(now()) @db.Timestamp(6)
+  planilha     Planilha         @relation(fields: [planilha_id], references: [id], onDelete: Cascade)
+  celulas      PlanilhaCelula[]
+
+  @@index([planilha_id], map: "idx_colunas_planilha")
+  @@map("planilha_colunas")
 }
 
-model PlanilhaPermission {
-  id          String   @id @default(uuid())
-  planilhaId  String
-  userId      String
-  canEdit     Boolean  @default(false)
-  canView     Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  
-  // Relations
-  planilha    Planilha @relation(fields: [planilhaId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([planilhaId, userId])
-  @@map("planilha_permissions")
+model PlanilhaLinha {
+  id          String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  planilha_id String           @db.Uuid
+  ordem       Int              @default(0)
+  dados       Json?            // Cache dos dados da linha para performance
+  created_at  DateTime         @default(now()) @db.Timestamp(6)
+  updated_at  DateTime         @default(now()) @db.Timestamp(6)
+  planilha    Planilha         @relation(fields: [planilha_id], references: [id], onDelete: Cascade)
+  celulas     PlanilhaCelula[]
+
+  @@index([planilha_id], map: "idx_linhas_planilha")
+  @@map("planilha_linhas")
 }
+
+model PlanilhaCelula {
+  id         String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  linha_id   String         @db.Uuid
+  coluna_id  String         @db.Uuid
+  valor      String?        // Valor como texto
+  valor_num  Decimal?       @db.Decimal(20, 6) // Valor numérico para cálculos
+  valor_bool Boolean?       // Valor booleano
+  valor_data DateTime?      @db.Timestamp(6) // Valor data
+  formula    String?        // Fórmula se aplicável
+  validado   Boolean        @default(true)
+  erro       String?        // Mensagem de erro se houver
+  created_at DateTime       @default(now()) @db.Timestamp(6)
+  updated_at DateTime       @default(now()) @db.Timestamp(6)
+  linha      PlanilhaLinha  @relation(fields: [linha_id], references: [id], onDelete: Cascade)
+  coluna     PlanilhaColuna @relation(fields: [coluna_id], references: [id], onDelete: Cascade)
+
+  @@unique([linha_id, coluna_id])
+  @@index([linha_id], map: "idx_celulas_linha")
+  @@index([coluna_id], map: "idx_celulas_coluna")
+  @@map("planilha_celulas")
+}
+
+model PlanilhaPermissao {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  planilha_id String   @db.Uuid
+  user_id     String   @db.Uuid
+  nivel       String   @db.VarChar(50) // LEITURA, ESCRITA, ADMIN
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  planilha    Planilha @relation(fields: [planilha_id], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([planilha_id, user_id])
+  @@index([planilha_id], map: "idx_permissoes_planilha")
+  @@index([user_id], map: "idx_permissoes_user")
+  @@map("planilha_permissoes")
+}
+
+model PlanilhaVersao {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  planilha_id String   @db.Uuid
+  versao      Int
+  snapshot    Json     // Snapshot completo da planilha
+  criado_por  String   @db.VarChar(255)
+  comentario  String?
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  planilha    Planilha @relation(fields: [planilha_id], references: [id], onDelete: Cascade)
+
+  @@index([planilha_id], map: "idx_versoes_planilha")
+  @@map("planilha_versoes")
+}
+
+// ============================================
+// SISTEMA DE MÍDIA E LOGS
+// ============================================
 
 model Media {
-  id          String    @id @default(uuid())
-  filename    String
-  originalName String
-  path        String
-  type        MediaType
-  size        Int
-  mimeType    String
-  
-  startupId   String?
-  
-  createdAt   DateTime  @default(now())
-  
-  // Relations
-  startup     Startup?  @relation(fields: [startupId], references: [id], onDelete: SetNull)
-  
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nome_original String    @db.VarChar(255)
+  nome_arquivo  String    @db.VarChar(255)
+  caminho       String
+  url           String
+  mime_type     String    @db.VarChar(100)
+  tamanho       Int       // Em bytes
+  largura       Int?      // Para imagens
+  altura        Int?      // Para imagens
+  tipo          String    @db.VarChar(50) // IMAGE, VIDEO, DOCUMENT, OTHER
+  pasta         String?   @db.VarChar(100)
+  relacionado_tipo String? @db.VarChar(50) // startup, edital, parceiro, user
+  relacionado_id   String? @db.Uuid
+  criado_por    String?   @db.Uuid
+  descricao     String?
+  tags          String[]
+  publico       Boolean   @default(false)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+
+  @@index([tipo], map: "idx_media_tipo")
+  @@index([relacionado_tipo, relacionado_id], map: "idx_media_relacionado")
+  @@index([criado_por], map: "idx_media_criado_por")
   @@map("media")
 }
 
 model Log {
-  id        String   @id @default(uuid())
-  userId    String?
-  action    String
-  entity    String
-  entityId  String?
-  details   Json?
-  
-  createdAt DateTime @default(now())
-  
-  // Relations
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String?  @db.Uuid
+  acao       String   @db.VarChar(100)
+  entidade   String   @db.VarChar(50)
+  entidade_id String? @db.Uuid
+  dados_antes Json?
+  dados_depois Json?
+  ip         String?  @db.VarChar(45)
+  user_agent String?
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id], map: "idx_logs_user")
+  @@index([entidade, entidade_id], map: "idx_logs_entidade")
+  @@index([created_at], map: "idx_logs_data")
   @@map("logs")
 }

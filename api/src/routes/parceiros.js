@@ -6,7 +6,7 @@ import {
   updateParceiro,
   deleteParceiro
 } from '../controllers/parceirosController.js';
-import { authenticate, authorize } from '../middlewares/auth.js';
+import { authenticate, isSuperAdmin } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -15,8 +15,8 @@ router.get('/', getAllParceiros);
 router.get('/:slug', getParceiroBySlug);
 
 // Rotas protegidas (admin only)
-router.post('/', authenticate, authorize('SUPER_ADMIN'), createParceiro);
-router.put('/:id', authenticate, authorize('SUPER_ADMIN'), updateParceiro);
-router.delete('/:id', authenticate, authorize('SUPER_ADMIN'), deleteParceiro);
+router.post('/', authenticate, isSuperAdmin, createParceiro);
+router.put('/:id', authenticate, isSuperAdmin, updateParceiro);
+router.delete('/:id', authenticate, isSuperAdmin, deleteParceiro);
 
 export default router;

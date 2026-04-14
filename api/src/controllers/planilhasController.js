@@ -1,89 +1,101 @@
-import { z } from 'zod';
 import prisma from '../config/database.js';
-import { AppError } from '../middlewares/errorHandler.js';
 
-const planilhaSchema = z.object({
-  name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
-  description: z.string().optional().nullable()
-});
-
-// GET /api/planilhas
+// GET /api/planilhas - Lista planilhas (filtradas por startup do usuário)
 export const getAllPlanilhas = async (req, res, next) => {
   try {
-    const userId = req.user.id;
-    const userRole = req.user.role;
-    
-    let planilhas;
-    
-    if (userRole === 'SUPER_ADMIN') {
-      // Admin vê todas
-      planilhas = await prisma.planilha.findMany({
-        include: {
-          permissions: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true
-                }
-              }
-            }
-          },
-          _count: {
-            select: { rows: true }
-          }
-        },
-        orderBy: { updatedAt: 'desc' }
+    const { tipo, ativa } = req.query;
+    const where = {};
+
+    // INCUBADO vê só suas planilhas
+    if (req.user.role === 'INCUBADO') {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { startup_id: true }
       });
-    } else {
-      // Incubado vê apenas as que tem permissão
-      planilhas = await prisma.planilha.findMany({
-        where: {
-          permissions: {
-            some: {
-              userId,
-              canView: true
-            }
-          }
-        },
-        include: {
-          permissions: {
-            where: { userId }
-          },
-          _count: {
-            select: { rows: true }
-          }
-        },
-        orderBy: { updatedAt: 'desc' }
-      });
+
+      if (!user.startup_id) {
+        return res.json({ planilhas: [] });
+      }
+
+      where.startup_id = user.startup_id;
     }
-    
+
+    if (tipo) where.tipo = tipo;
+    if (ativa !== undefined) where.ativa = ativa === 'true';
+
+    const planilhas = await prisma.planilha.findMany({
+      where,
+      include: {
+        startup: {
+          select: {
+            id: true,
+            nome: true,
+            slug: true
+          }
+        },
+        criador: {
+          select: {
+            id: true,
+            nome: true,
+            email: true
+          }
+        },
+        _count: {
+          select: {
+            colunas: true,
+            linhas: true
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+
     res.json({ planilhas });
   } catch (error) {
     next(error);
   }
 };
 
-// GET /api/planilhas/:id
+// GET /api/planilhas/:id - Busca planilha completa com dados
 export const getPlanilhaById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
-    const userRole = req.user.role;
-    
+
     const planilha = await prisma.planilha.findUnique({
       where: { id },
       include: {
-        rows: {
-          orderBy: { rowIndex: 'asc' }
+        colunas: {
+          orderBy: { ordem: 'asc' }
         },
-        permissions: {
+        linhas: {
+          include: {
+            celulas: {
+              include: {
+                coluna: {
+                  select: {
+                    id: true,
+                    nome: true,
+                    tipo: true
+                  }
+                }
+              }
+            }
+          },
+          orderBy: { ordem: 'asc' }
+        },
+        startup: {
+          select: {
+            id: true,
+            nome: true,
+            slug: true
+          }
+        },
+        permissoes: {
           include: {
             user: {
               select: {
                 id: true,
-                name: true,
+                nome: true,
                 email: true
               }
             }
@@ -91,298 +103,300 @@ export const getPlanilhaById = async (req, res, next) => {
         }
       }
     });
-    
+
     if (!planilha) {
-      throw new AppError('Planilha não encontrada', 404);
+      return res.status(404).json({ error: 'Planilha não encontrada' });
     }
-    
-    // Verifica permissão
-    if (userRole !== 'SUPER_ADMIN') {
-      const permission = planilha.permissions.find(p => p.userId === userId);
-      if (!permission || !permission.canView) {
-        throw new AppError('Sem permissão para acessar esta planilha', 403);
-      }
-    }
-    
-    res.json({ planilha });
+
+    res.json(planilha);
   } catch (error) {
     next(error);
   }
 };
 
-// POST /api/planilhas (admin only)
+// POST /api/planilhas - Cria nova planilha
 export const createPlanilha = async (req, res, next) => {
   try {
-    const data = planilhaSchema.parse(req.body);
-    
-    const planilha = await prisma.planilha.create({
-      data
-    });
-    
-    // Log
-    await prisma.log.create({
-      data: {
-        userId: req.user.id,
-        action: 'CREATE',
-        entity: 'PLANILHA',
-        entityId: planilha.id,
-        details: { name: planilha.name }
+    const { nome, descricao, startup_id, tipo, template, config, colunas } = req.body;
+
+    if (!nome || !startup_id) {
+      return res.status(400).json({ 
+        error: 'Campos obrigatórios: nome, startup_id' 
+      });
+    }
+
+    // INCUBADO só pode criar para sua própria startup
+    if (req.user.role === 'INCUBADO') {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { startup_id: true }
+      });
+
+      if (user.startup_id !== startup_id) {
+        return res.status(403).json({ 
+          error: 'Você só pode criar planilhas para sua startup' 
+        });
       }
+    }
+
+    const planilha = await prisma.$transaction(async (tx) => {
+      const newPlanilha = await tx.planilha.create({
+        data: {
+          nome,
+          descricao,
+          startup_id,
+          tipo: tipo || 'GERAL',
+          template: template || false,
+          config,
+          criado_por: req.user.id,
+          ativa: true,
+          versao: 1
+        }
+      });
+
+      const colunasData = colunas || [
+        { nome: 'Coluna A', tipo: 'TEXT', ordem: 1 },
+        { nome: 'Coluna B', tipo: 'TEXT', ordem: 2 },
+        { nome: 'Coluna C', tipo: 'NUMBER', ordem: 3 }
+      ];
+
+      await tx.planilhaColuna.createMany({
+        data: colunasData.map(col => ({
+          planilha_id: newPlanilha.id,
+          nome: col.nome,
+          tipo: col.tipo || 'TEXT',
+          ordem: col.ordem,
+          largura: col.largura || 150,
+          editavel: col.editavel !== undefined ? col.editavel : true,
+          formula: col.formula
+        }))
+      });
+
+      await tx.planilhaPermissao.create({
+        data: {
+          planilha_id: newPlanilha.id,
+          user_id: req.user.id,
+          permissao: 'OWNER'
+        }
+      });
+
+      return newPlanilha;
     });
-    
-    res.status(201).json({
-      message: 'Planilha criada com sucesso',
-      planilha
-    });
+
+    res.status(201).json(planilha);
   } catch (error) {
     next(error);
   }
 };
 
-// PUT /api/planilhas/:id (admin only)
+// POST /api/planilhas/:id/colunas - Adiciona coluna
+export const addColuna = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { nome, tipo, largura, editavel, formula } = req.body;
+
+    if (req.userPermission === 'READ') {
+      return res.status(403).json({ 
+        error: 'Você não tem permissão para editar esta planilha' 
+      });
+    }
+
+    const ultimaColuna = await prisma.planilhaColuna.findFirst({
+      where: { planilha_id: id },
+      orderBy: { ordem: 'desc' },
+      select: { ordem: true }
+    });
+
+    const novaOrdem = (ultimaColuna?.ordem || 0) + 1;
+
+    const coluna = await prisma.planilhaColuna.create({
+      data: {
+        planilha_id: id,
+        nome: nome || `Coluna ${novaOrdem}`,
+        tipo: tipo || 'TEXT',
+        ordem: novaOrdem,
+        largura: largura || 150,
+        editavel: editavel !== undefined ? editavel : true,
+        formula
+      }
+    });
+
+    res.status(201).json(coluna);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/planilhas/:id/linhas - Adiciona linha
+export const addLinha = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (req.userPermission === 'READ') {
+      return res.status(403).json({ 
+        error: 'Você não tem permissão para editar esta planilha' 
+      });
+    }
+
+    const ultimaLinha = await prisma.planilhaLinha.findFirst({
+      where: { planilha_id: id },
+      orderBy: { ordem: 'desc' },
+      select: { ordem: true }
+    });
+
+    const novaOrdem = (ultimaLinha?.ordem || 0) + 1;
+
+    const colunas = await prisma.planilhaColuna.findMany({
+      where: { planilha_id: id },
+      select: { id: true }
+    });
+
+    const linha = await prisma.$transaction(async (tx) => {
+      const novaLinha = await tx.planilhaLinha.create({
+        data: {
+          planilha_id: id,
+          ordem: novaOrdem
+        }
+      });
+
+      if (colunas.length > 0) {
+        await tx.planilhaCelula.createMany({
+          data: colunas.map(col => ({
+            linha_id: novaLinha.id,
+            coluna_id: col.id,
+            valor: null
+          }))
+        });
+      }
+
+      return novaLinha;
+    });
+
+    res.status(201).json(linha);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PUT /api/planilhas/:id/celulas/:celulaId - Atualiza célula
+export const updateCelula = async (req, res, next) => {
+  try {
+    const { id, celulaId } = req.params;
+    const { valor, valor_numerico, valor_data, valor_boolean } = req.body;
+
+    if (req.userPermission === 'READ') {
+      return res.status(403).json({ 
+        error: 'Você não tem permissão para editar esta planilha' 
+      });
+    }
+
+    const celula = await prisma.planilhaCelula.update({
+      where: { id: celulaId },
+      data: {
+        valor,
+        valor_numerico: valor_numerico ? parseFloat(valor_numerico) : null,
+        valor_data: valor_data ? new Date(valor_data) : null,
+        valor_boolean,
+        updated_by: req.user.id
+      }
+    });
+
+    res.json(celula);
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Célula não encontrada' });
+    }
+    next(error);
+  }
+};
+
+// PUT /api/planilhas/:id - Atualiza planilha
 export const updatePlanilha = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const data = planilhaSchema.partial().parse(req.body);
-    
+    const updateData = { ...req.body };
+
+    if (req.userPermission !== 'OWNER' && req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ 
+        error: 'Apenas o dono pode atualizar configurações da planilha' 
+      });
+    }
+
+    delete updateData.id;
+    delete updateData.created_at;
+    delete updateData.criado_por;
+    delete updateData.startup_id;
+
+    updateData.atualizado_por = req.user.id;
+
     const planilha = await prisma.planilha.update({
       where: { id },
-      data
+      data: updateData
     });
-    
-    // Log
-    await prisma.log.create({
-      data: {
-        userId: req.user.id,
-        action: 'UPDATE',
-        entity: 'PLANILHA',
-        entityId: planilha.id,
-        details: { name: planilha.name }
-      }
-    });
-    
-    res.json({
-      message: 'Planilha atualizada com sucesso',
-      planilha
-    });
+
+    res.json(planilha);
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Planilha não encontrada' });
+    }
     next(error);
   }
 };
 
-// DELETE /api/planilhas/:id (admin only)
+// DELETE /api/planilhas/:id - Remove planilha
 export const deletePlanilha = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
+    if (req.userPermission !== 'OWNER' && req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ 
+        error: 'Apenas o dono pode deletar a planilha' 
+      });
+    }
+
     await prisma.planilha.delete({
       where: { id }
     });
-    
-    // Log
-    await prisma.log.create({
-      data: {
-        userId: req.user.id,
-        action: 'DELETE',
-        entity: 'PLANILHA',
-        entityId: id
-      }
-    });
-    
-    res.json({ message: 'Planilha deletada com sucesso' });
+
+    res.json({ message: 'Planilha removida com sucesso' });
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Planilha não encontrada' });
+    }
     next(error);
   }
 };
 
-// POST /api/planilhas/:id/rows
-export const addRow = async (req, res, next) => {
+// POST /api/planilhas/:id/permissoes - Adiciona permissão de usuário
+export const addPermissao = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { data: rowData } = req.body;
-    
-    // Verifica permissão de edição
-    if (req.user.role !== 'SUPER_ADMIN') {
-      const permission = await prisma.planilhaPermission.findUnique({
-        where: {
-          planilhaId_userId: {
-            planilhaId: id,
-            userId: req.user.id
-          }
-        }
+    const { user_id, permissao } = req.body;
+
+    if (req.userPermission !== 'OWNER' && req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ 
+        error: 'Apenas o dono pode gerenciar permissões' 
       });
-      
-      if (!permission || !permission.canEdit) {
-        throw new AppError('Sem permissão para editar esta planilha', 403);
-      }
     }
-    
-    // Pega o próximo índice
-    const lastRow = await prisma.planilhaRow.findFirst({
-      where: { planilhaId: id },
-      orderBy: { rowIndex: 'desc' }
-    });
-    
-    const rowIndex = lastRow ? lastRow.rowIndex + 1 : 0;
-    
-    const row = await prisma.planilhaRow.create({
+
+    const permissaoRecord = await prisma.planilhaPermissao.create({
       data: {
-        planilhaId: id,
-        rowIndex,
-        data: rowData || {}
-      }
-    });
-    
-    res.status(201).json({
-      message: 'Linha adicionada com sucesso',
-      row
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// PUT /api/planilhas/:planilhaId/rows/:rowId
-export const updateRow = async (req, res, next) => {
-  try {
-    const { rowId } = req.params;
-    const { data: rowData } = req.body;
-    
-    const row = await prisma.planilhaRow.findUnique({
-      where: { id: rowId },
-      include: { planilha: true }
-    });
-    
-    if (!row) {
-      throw new AppError('Linha não encontrada', 404);
-    }
-    
-    // Verifica permissão de edição
-    if (req.user.role !== 'SUPER_ADMIN') {
-      const permission = await prisma.planilhaPermission.findUnique({
-        where: {
-          planilhaId_userId: {
-            planilhaId: row.planilhaId,
-            userId: req.user.id
-          }
-        }
-      });
-      
-      if (!permission || !permission.canEdit) {
-        throw new AppError('Sem permissão para editar esta planilha', 403);
-      }
-    }
-    
-    const updatedRow = await prisma.planilhaRow.update({
-      where: { id: rowId },
-      data: { data: rowData }
-    });
-    
-    res.json({
-      message: 'Linha atualizada com sucesso',
-      row: updatedRow
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// DELETE /api/planilhas/:planilhaId/rows/:rowId
-export const deleteRow = async (req, res, next) => {
-  try {
-    const { rowId } = req.params;
-    
-    const row = await prisma.planilhaRow.findUnique({
-      where: { id: rowId }
-    });
-    
-    if (!row) {
-      throw new AppError('Linha não encontrada', 404);
-    }
-    
-    // Verifica permissão
-    if (req.user.role !== 'SUPER_ADMIN') {
-      const permission = await prisma.planilhaPermission.findUnique({
-        where: {
-          planilhaId_userId: {
-            planilhaId: row.planilhaId,
-            userId: req.user.id
-          }
-        }
-      });
-      
-      if (!permission || !permission.canEdit) {
-        throw new AppError('Sem permissão para editar esta planilha', 403);
-      }
-    }
-    
-    await prisma.planilhaRow.delete({
-      where: { id: rowId }
-    });
-    
-    res.json({ message: 'Linha deletada com sucesso' });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// POST /api/planilhas/:id/permissions (admin only)
-export const addPermission = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { userId, canEdit, canView } = req.body;
-    
-    if (!userId) {
-      throw new AppError('userId é obrigatório', 400);
-    }
-    
-    const permission = await prisma.planilhaPermission.upsert({
-      where: {
-        planilhaId_userId: {
-          planilhaId: id,
-          userId
-        }
-      },
-      update: {
-        canEdit: canEdit !== undefined ? canEdit : false,
-        canView: canView !== undefined ? canView : true
-      },
-      create: {
-        planilhaId: id,
-        userId,
-        canEdit: canEdit !== undefined ? canEdit : false,
-        canView: canView !== undefined ? canView : true
+        planilha_id: id,
+        user_id,
+        permissao: permissao || 'READ'
       },
       include: {
         user: {
           select: {
             id: true,
-            name: true,
+            nome: true,
             email: true
           }
         }
       }
     });
-    
-    res.status(201).json({
-      message: 'Permissão atualizada com sucesso',
-      permission
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
-// DELETE /api/planilhas/:planilhaId/permissions/:permissionId (admin only)
-export const removePermission = async (req, res, next) => {
-  try {
-    const { permissionId } = req.params;
-    
-    await prisma.planilhaPermission.delete({
-      where: { id: permissionId }
-    });
-    
-    res.json({ message: 'Permissão removida com sucesso' });
+    res.status(201).json(permissaoRecord);
   } catch (error) {
     next(error);
   }

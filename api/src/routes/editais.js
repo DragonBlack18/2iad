@@ -4,9 +4,10 @@ import {
   getEditalBySlug,
   createEdital,
   updateEdital,
-  deleteEdital
+  deleteEdital,
+  getEditalCandidaturas
 } from '../controllers/editaisController.js';
-import { authenticate, authorize } from '../middlewares/auth.js';
+import { authenticate, isSuperAdmin } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -15,8 +16,9 @@ router.get('/', getAllEditais);
 router.get('/:slug', getEditalBySlug);
 
 // Rotas protegidas (admin only)
-router.post('/', authenticate, authorize('SUPER_ADMIN'), createEdital);
-router.put('/:id', authenticate, authorize('SUPER_ADMIN'), updateEdital);
-router.delete('/:id', authenticate, authorize('SUPER_ADMIN'), deleteEdital);
+router.post('/', authenticate, isSuperAdmin, createEdital);
+router.put('/:id', authenticate, isSuperAdmin, updateEdital);
+router.delete('/:id', authenticate, isSuperAdmin, deleteEdital);
+router.get('/:id/candidaturas', authenticate, isSuperAdmin, getEditalCandidaturas);
 
 export default router;

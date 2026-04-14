@@ -36,26 +36,26 @@ export const register = async (req, res, next) => {
     const user = await prisma.user.create({
       data: {
         email: data.email,
-        password: hashedPassword,
-        name: data.name,
+        senha: hashedPassword,
+        nome: data.name,
         role: data.role || 'INCUBADO'
       },
       select: {
         id: true,
         email: true,
-        name: true,
+        nome: true,
         role: true,
-        createdAt: true
+        created_at: true
       }
     });
     
     // Log
     await prisma.log.create({
       data: {
-        userId: user.id,
-        action: 'CREATE',
-        entity: 'USER',
-        entityId: user.id
+        user_id: user.id,
+        acao: 'CREATE',
+        entidade: 'USER',
+        entidade_id: user.id
       }
     });
     
@@ -77,12 +77,12 @@ export const login = async (req, res, next) => {
       where: { email: data.email }
     });
     
-    if (!user || !user.active) {
+    if (!user || !user.ativo) {
       throw new AppError('Credenciais inválidas', 401);
     }
     
     // Verifica senha
-    const validPassword = await bcrypt.compare(data.password, user.password);
+    const validPassword = await bcrypt.compare(data.password, user.senha);
     
     if (!validPassword) {
       throw new AppError('Credenciais inválidas', 401);
@@ -98,10 +98,10 @@ export const login = async (req, res, next) => {
     // Log
     await prisma.log.create({
       data: {
-        userId: user.id,
-        action: 'LOGIN',
-        entity: 'USER',
-        entityId: user.id
+        user_id: user.id,
+        acao: 'LOGIN',
+        entidade: 'USER',
+        entidade_id: user.id
       }
     });
     
@@ -111,7 +111,7 @@ export const login = async (req, res, next) => {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        name: user.nome,
         role: user.role
       }
     });
@@ -127,10 +127,10 @@ export const getMe = async (req, res, next) => {
       select: {
         id: true,
         email: true,
-        name: true,
+        nome: true,
         role: true,
-        createdAt: true,
-        startupMembers: {
+        created_at: true,
+        startup_membros: {
           include: {
             startup: true
           }
@@ -147,7 +147,7 @@ export const getMe = async (req, res, next) => {
 export const updateProfile = async (req, res, next) => {
   try {
     const updateSchema = z.object({
-      name: z.string().min(3).optional(),
+      nome: z.string().min(3).optional(),
       currentPassword: z.string().optional(),
       newPassword: z.string().min(6).optional()
     });
@@ -155,8 +155,8 @@ export const updateProfile = async (req, res, next) => {
     const data = updateSchema.parse(req.body);
     const updateData = {};
     
-    if (data.name) {
-      updateData.name = data.name;
+    if (data.nome) {
+      updateData.nome = data.nome;
     }
     
     if (data.newPassword && data.currentPassword) {
@@ -164,13 +164,13 @@ export const updateProfile = async (req, res, next) => {
         where: { id: req.user.id }
       });
       
-      const validPassword = await bcrypt.compare(data.currentPassword, user.password);
+      const validPassword = await bcrypt.compare(data.currentPassword, user.senha);
       
       if (!validPassword) {
         throw new AppError('Senha atual incorreta', 400);
       }
       
-      updateData.password = await bcrypt.hash(data.newPassword, 10);
+      updateData.senha = await bcrypt.hash(data.newPassword, 10);
     }
     
     const user = await prisma.user.update({

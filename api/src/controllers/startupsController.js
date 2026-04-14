@@ -32,31 +32,27 @@ export const getAllStartups = async (req, res, next) => {
     const where = {};
     
     if (status) where.status = status;
-    if (segment) where.segment = segment;
+    if (segment) where.setor = segment;
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { nome: { contains: search, mode: 'insensitive' } },
+        { descricao: { contains: search, mode: 'insensitive' } }
       ];
     }
     
     const startups = await prisma.startup.findMany({
       where,
       include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
-            }
-          }
+        startup_membros: {
+          orderBy: { ordem: 'asc' },
+          take: 5
         },
-        media: true
+        startup_imagens: {
+          where: { tipo: 'LOGO' },
+          take: 1
+        }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
     
     res.json({ startups });
@@ -73,18 +69,15 @@ export const getStartupBySlug = async (req, res, next) => {
     const startup = await prisma.startup.findUnique({
       where: { slug },
       include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
-            }
-          }
+        startup_membros: {
+          orderBy: { ordem: 'asc' }
         },
-        media: true
+        startup_imagens: {
+          orderBy: { ordem: 'asc' }
+        },
+        startup_documentos: {
+          orderBy: { created_at: 'desc' }
+        }
       }
     });
     

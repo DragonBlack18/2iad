@@ -1,13 +1,4 @@
-import { z } from 'zod';
 import prisma from '../config/database.js';
-import { AppError } from '../middlewares/errorHandler.js';
-
-const parceiroSchema = z.object({
-  name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
-  description: z.string().optional().nullable(),
-  logoUrl: z.string().url().optional().nullable(),
-  website: z.string().url().optional().nullable()
-});
 
 const generateSlug = (text) => {
   return text
@@ -18,11 +9,18 @@ const generateSlug = (text) => {
     .replace(/(^-|-$)/g, '');
 };
 
-// GET /api/parceiros (público)
+// GET /api/parceiros
 export const getAllParceiros = async (req, res, next) => {
   try {
+    const { tipo, ativo } = req.query;
+
+    const where = {};
+    if (tipo) where.tipo = tipo;
+    if (ativo !== undefined) where.ativo = ativo === 'true';
+
     const parceiros = await prisma.parceiro.findMany({
-      orderBy: { name: 'asc' }
+      where,
+      orderBy: { nome: 'asc' }
     });
     
     res.json({ parceiros });
@@ -31,7 +29,7 @@ export const getAllParceiros = async (req, res, next) => {
   }
 };
 
-// GET /api/parceiros/:slug (público)
+// GET /api/parceiros/:slug
 export const getParceiroBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
@@ -41,105 +39,103 @@ export const getParceiroBySlug = async (req, res, next) => {
     });
     
     if (!parceiro) {
-      throw new AppError('Parceiro não encontrado', 404);
+      return res.status(404).json({ error: 'Parceiro não encontrado' });
     }
     
-    res.json({ parceiro });
+    res.json(parceiro);
   } catch (error) {
     next(error);
   }
 };
 
-// POST /api/parceiros (admin only)
+// POST /api/parceiros
 export const createParceiro = async (req, res, next) => {
   try {
-    const data = parceiroSchema.parse(req.body);
-    
-    const slug = generateSlug(data.name);
-    
+    const {
+      nome,
+      slug,
+      descricao,
+      logo,
+      website,
+      email,
+      telefone,
+      tipo,
+      redes_sociais,
+      ativo
+    } = req.body;
+
+    if (!nome) {
+      return res.status(400).json({ error: 'Campo nome é obrigatório' });
+    }
+
+    const parceiroSlug = slug || generateSlug(nome);
+
+    const existingParceiro = await prisma.parceiro.findUnique({
+      where: { slug: parceiroSlug }
+    });
+
+    if (existingParceiro) {
+      return res.status(400).json({ error: 'Slug já existe' });
+    }
+
     const parceiro = await prisma.parceiro.create({
       data: {
-        ...data,
-        slug
+        nome,
+        slug: parceiroSlug,
+        descricao,
+        logo,
+        website,
+        email,
+        telefone,
+        tipo: tipo || 'EMPRESA',
+        redes_sociais,
+        ativo: ativo !== undefined ? ativo : true
       }
     });
-    
-    // Log
-    await prisma.log.create({
-      data: {
-        userId: req.user.id,
-        action: 'CREATE',
-        entity: 'PARCEIRO',
-        entityId: parceiro.id,
-        details: { name: parceiro.name }
-      }
-    });
-    
-    res.status(201).json({
-      message: 'Parceiro criado com sucesso',
-      parceiro
-    });
+
+    res.status(201).json(parceiro);
   } catch (error) {
     next(error);
   }
 };
 
-// PUT /api/parceiros/:id (admin only)
+// PUT /api/parceiros/:id
 export const updateParceiro = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const data = parceiroSchema.partial().parse(req.body);
-    
-    if (data.name) {
-      data.slug = generateSlug(data.name);
-    }
-    
+    const updateData = { ...req.body };
+
+    delete updateData.id;
+    delete updateData.created_at;
+
     const parceiro = await prisma.parceiro.update({
       where: { id },
-      data
+      data: updateData
     });
-    
-    // Log
-    await prisma.log.create({
-      data: {
-        userId: req.user.id,
-        action: 'UPDATE',
-        entity: 'PARCEIRO',
-        entityId: parceiro.id,
-        details: { name: parceiro.name }
-      }
-    });
-    
-    res.json({
-      message: 'Parceiro atualizado com sucesso',
-      parceiro
-    });
+
+    res.json(parceiro);
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Parceiro não encontrado' });
+    }
     next(error);
   }
 };
 
-// DELETE /api/parceiros/:id (admin only)
+// DELETE /api/parceiros/:id
 export const deleteParceiro = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     await prisma.parceiro.delete({
       where: { id }
     });
-    
-    // Log
-    await prisma.log.create({
-      data: {
-        userId: req.user.id,
-        action: 'DELETE',
-        entity: 'PARCEIRO',
-        entityId: id
-      }
-    });
-    
-    res.json({ message: 'Parceiro deletado com sucesso' });
+
+    res.json({ message: 'Parceiro removido com sucesso' });
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Parceiro não encontrado' });
+    }
     next(error);
   }
 };

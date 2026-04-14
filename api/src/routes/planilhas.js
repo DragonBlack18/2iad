@@ -5,35 +5,30 @@ import {
   createPlanilha,
   updatePlanilha,
   deletePlanilha,
-  addRow,
-  updateRow,
-  deleteRow,
-  addPermission,
-  removePermission
+  addColuna,
+  addLinha,
+  updateCelula,
+  addPermissao
 } from '../controllers/planilhasController.js';
-import { authenticate, authorize } from '../middlewares/auth.js';
+import { authenticate, canAccessPlanilha } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-// Todas as rotas de planilhas requerem autenticação
-router.use(authenticate);
+// Rotas protegidas (usuário autenticado)
+router.get('/', authenticate, getAllPlanilhas);
+router.post('/', authenticate, createPlanilha);
 
-// Listagem e detalhes
-router.get('/', getAllPlanilhas);
-router.get('/:id', getPlanilhaById);
+// Rotas de planilha específica (com verificação de acesso multi-tenant)
+router.get('/:id', authenticate, canAccessPlanilha, getPlanilhaById);
+router.put('/:id', authenticate, canAccessPlanilha, updatePlanilha);
+router.delete('/:id', authenticate, canAccessPlanilha, deletePlanilha);
 
-// CRUD de planilhas (admin only)
-router.post('/', authorize('SUPER_ADMIN'), createPlanilha);
-router.put('/:id', authorize('SUPER_ADMIN'), updatePlanilha);
-router.delete('/:id', authorize('SUPER_ADMIN'), deletePlanilha);
+// Rotas de manipulação de dados
+router.post('/:id/colunas', authenticate, canAccessPlanilha, addColuna);
+router.post('/:id/linhas', authenticate, canAccessPlanilha, addLinha);
+router.put('/:id/celulas/:celulaId', authenticate, canAccessPlanilha, updateCelula);
 
-// Linhas (requer permissão)
-router.post('/:id/rows', addRow);
-router.put('/:planilhaId/rows/:rowId', updateRow);
-router.delete('/:planilhaId/rows/:rowId', deleteRow);
-
-// Permissões (admin only)
-router.post('/:id/permissions', authorize('SUPER_ADMIN'), addPermission);
-router.delete('/:planilhaId/permissions/:permissionId', authorize('SUPER_ADMIN'), removePermission);
+// Rotas de permissões
+router.post('/:id/permissoes', authenticate, canAccessPlanilha, addPermissao);
 
 export default router;

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Calendar, FileText, Clock, ExternalLink } from 'lucide-react'
+import { Calendar, Clock, Users, FileText } from 'lucide-react'
 import { editaisAPI } from '../lib/api'
 import { formatDate } from '../lib/utils'
 
@@ -86,69 +86,72 @@ export default function Editais() {
           
           {/* Editais List */}
           {!isLoading && !error && editais.length > 0 && (
-            <div className="space-y-8">
+            <div className="space-y-6">
               {editais.map((edital) => (
                 <div 
                   key={edital.id} 
-                  className={`bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-[1.02] transition-all duration-300 ${
-                    isOpen(edital) ? 'border-2 border-green-400' : 'border border-gray-200'
-                  }`}
+                  className="bg-white rounded-xl border-2 border-gray-200 p-8 hover:border-blue-500 hover:shadow-lg transition-all"
                 >
-                  <div className="p-8">
-                    <div className="flex flex-wrap items-center gap-3 mb-4">
-                      <span className={`border-2 rounded-full px-4 py-1 text-sm font-bold ${
-                        getStatusBadge(edital.status)
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                        {edital.titulo}
+                      </h2>
+                      <span className={`inline-block px-4 py-1 rounded-full text-sm font-semibold ${
+                        edital.status === 'ABERTO' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-gray-100 text-gray-600'
                       }`}>
-                        {getStatusText(edital.status)}
+                        {edital.status === 'ABERTO' ? '✓ Aberto' : '✕ Fechado'}
                       </span>
-                      {isOpen(edital) && (
-                        <span className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full px-4 py-1 text-sm font-bold shadow-md animate-pulse">
-                          📢 Inscrições Abertas
-                        </span>
-                      )}
                     </div>
-                    
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">
-                      {edital.title}
-                    </h2>
-                    <p className="text-gray-600 text-lg leading-relaxed mb-6">
-                      {edital.description}
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-6 mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                          <Calendar className="h-5 w-5 text-blue-500" />
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-500 font-medium">Início</div>
-                          <div className="text-gray-800 font-semibold">{formatDate(edital.startDate)}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-purple-50 p-3 rounded-lg">
-                          <Clock className="h-5 w-5 text-purple-500" />
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-500 font-medium">Término</div>
-                          <div className="text-gray-800 font-semibold">{formatDate(edital.endDate)}</div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {edital.pdfUrl && (
-                      <a
-                        href={edital.pdfUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold rounded-lg px-6 py-3 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-                      >
-                        <FileText className="h-5 w-5" />
-                        Ver Edital Completo
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
                   </div>
+                  
+                  {/* Descrição */}
+                  <p className="text-gray-600 mb-6 leading-relaxed">
+                    {edital.descricao}
+                  </p>
+                  
+                  {/* Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <Calendar className="h-5 w-5 text-blue-500" />
+                      <div>
+                        <div className="text-xs text-gray-500">Início</div>
+                        <div className="font-semibold">{formatDate(edital.data_abertura)}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <Clock className="h-5 w-5 text-purple-500" />
+                      <div>
+                        <div className="text-xs text-gray-500">Término</div>
+                        <div className="font-semibold">{formatDate(edital.data_encerramento)}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <Users className="h-5 w-5 text-green-500" />
+                      <div>
+                        <div className="text-xs text-gray-500">Vagas</div>
+                        <div className="font-semibold">{edital.vagas || 'Ilimitadas'}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Botão */}
+                  {edital.status === 'ABERTO' && (
+                    <a
+                      href={edital.arquivo_edital || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <FileText className="h-5 w-5" />
+                      Candidatar-se
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
