@@ -380,16 +380,10 @@ Veja guia completo em **[DEPLOYMENT.md](DEPLOYMENT.md)**
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-## 👥 Equipe
-
-- **Rose** - SUPER_ADMIN - rose@incubadora2iad.com.br
-
 ## 📞 Suporte
 
 Para suporte, entre em contato:
-- Email: suporte@incubadora2iad.com.br
-- WhatsApp: (XX) XXXXX-XXXX
-
+- Email: davibrandzoletti11@gmail.com
 ---
 
 Desenvolvido com ❤️ pela equipe 2IAD
