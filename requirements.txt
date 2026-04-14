@@ -1,0 +1,15 @@
+# 2IAD Project Requirements
+
+## System Requirements
+Node.js >= 18.x
+PostgreSQL >= 15.x
+npm >= 9.x
+
+## Core Backend Dependencies (api/package.json)
+express, prisma, jsonwebtoken, bcrypt, zod, multer, cors, dotenv
+
+## Core Public Frontend Dependencies (public-frontend/package.json)
+react, react-dom, react-router-dom, axios, tailwindcss, lucide-react, @tanstack/react-query
+
+## Core Admin Frontend Dependencies (admin-frontend/package.json)
+react, react-dom, react-router-dom, axios, tailwindcss
